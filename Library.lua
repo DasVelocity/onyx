@@ -1668,7 +1668,6 @@ do
     Watermark.IconTile.LayoutOrder = -2
     TitleLabel.LayoutOrder = -1
     Watermark.Label.TextTransparency = 0.35
-    Watermark:SetIcon("zap")
 
     local Inset = game:GetService("GuiService"):GetGuiInset()
     Watermark.Holder.Position = UDim2.fromOffset(12, Inset.Y + 10)
@@ -5393,34 +5392,25 @@ function Library:CreateWindow(WindowInfo)
     })
     List(TitleRow, 10, Enum.FillDirection.Horizontal, nil, Enum.VerticalAlignment.Center)
 
-    -- Logo: solid accent tile with the icon knocked out in white (custom images fill the tile)
-    local LogoTile = New("Frame", {
-        BackgroundColor3 = "AccentColor",
+    -- Logo: only an image asset (number or "rbxassetid://..."), shown as-is. No asset = no logo.
+    local Logo = New("ImageLabel", {
+        BackgroundTransparency = 1,
         LayoutOrder = 0,
-        Size = UDim2.fromOffset(26, 26),
+        ScaleType = Enum.ScaleType.Fit,
+        Size = WindowInfo.IconSize,
         Visible = false,
         Parent = TitleRow,
     })
-    Corner(LogoTile, 7)
-    local WindowIcon = IconLabel({
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        ImageColor3 = Library.Colors.OnAccent,
-        Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(15, 15),
-        Parent = LogoTile,
-    }, nil)
-    if WindowInfo.Icon then
-        local Icon = Library:GetCustomIcon(WindowInfo.Icon)
-        if Icon then
-            LogoTile.Visible = true
-            Library:ApplyIcon(WindowIcon, WindowInfo.Icon)
-            if Icon.Custom or tonumber(WindowInfo.Icon) then
-                WindowIcon.ImageColor3 = Color3.new(1, 1, 1)
-                WindowIcon.Size = UDim2.fromScale(1, 1)
-                Library.Registry[WindowIcon] = nil
-                LogoTile.BackgroundTransparency = 1
-            end
-        end
+    local function SetLogo(Asset)
+        local Id = tonumber(Asset) and ("rbxassetid://" .. tostring(Asset))
+            or (typeof(Asset) == "string" and Asset:match("^rbxasset") and Asset)
+            or nil
+        Logo.Image = Id or ""
+        Logo.Visible = Id ~= nil
+    end
+    SetLogo(WindowInfo.Logo or WindowInfo.Icon)
+    Window.SetLogo = function(_, Asset)
+        SetLogo(Asset)
     end
 
     local TitleLabel = New("TextLabel", {
@@ -5434,9 +5424,6 @@ function Library:CreateWindow(WindowInfo)
         Parent = TitleRow,
     })
     Library.Watermark:SetTitle(WindowInfo.Title)
-    if WindowInfo.Icon and not tonumber(WindowInfo.Icon) then
-        Library.Watermark:SetIcon(WindowInfo.Icon)
-    end
 
     local TitleDivider = New("Frame", {
         BackgroundColor3 = "OutlineColor",
