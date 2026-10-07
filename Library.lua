@@ -1,18 +1,3 @@
---[[
-    Onyx UI Library
-    ---------------
-    Same API/structure as Obsidian (drop-in), styled as a blend of Obsidian + Linoria:
-      * Obsidian layout: sidebar tabs with lucide icons, search, footer, tab info, dialogs
-      * Linoria DNA: accent strip on the window, inset (recessed) controls, accent-edged notifications
-
-    Usage is identical to Obsidian:
-        local Library = loadstring(game:HttpGet(".../Library.lua"))()
-        local Window = Library:CreateWindow({ Title = "Onyx", Footer = "v1.0" })
-        local Tab = Window:AddTab("Main", "house")
-        local Box = Tab:AddLeftGroupbox("Features", "sparkles")
-        Box:AddToggle("MyToggle", { Text = "Enabled", Default = false })
-]]
-
 local cloneref = (cloneref or clonereference or function(instance: any)
     return instance
 end)
@@ -42,7 +27,6 @@ local Toggles = {}
 local Options = {}
 local Tooltips = {}
 
---// Public asset ids (same images Obsidian/Linoria use) \\--
 local Assets = {
     TransparencyTexture = "rbxassetid://139785960036434",
     SaturationMap = "rbxassetid://4155801252",
@@ -63,12 +47,10 @@ local Library = {
     Window = nil,
     WindowContainer = nil,
 
-    --// Search \\--
     SearchText = "",
     Searching = false,
     GlobalSearch = false,
 
-    --// Tabs \\--
     ActiveTab = nil,
     PreviousTab = nil,
     Tabs = {},
@@ -76,12 +58,10 @@ local Library = {
 
     DependencyBoxes = {},
 
-    --// Keybinds \\--
     KeybindFrame = nil,
     KeybindContainer = nil,
     KeybindToggles = {},
 
-    --// Notifications \\--
     Notifications = {},
     NotifySide = "Right",
 
@@ -91,7 +71,6 @@ local Library = {
 
     OpenedFrames = {},
 
-    --// Animations \\--
     TweenInfo = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
     SlowTweenInfo = TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
     SpringTweenInfo = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
@@ -105,18 +84,15 @@ local Library = {
         KeyPicker = true,
     },
 
-    --// States \\--
     Toggled = false,
     Unloaded = false,
     IsPicking = false,
 
-    --// Elements \\--
     Labels = Labels,
     Buttons = Buttons,
     Toggles = Toggles,
     Options = Options,
 
-    --// Options \\--
     ToggleKeybind = Enum.KeyCode.RightControl,
     ShowToggleFrameInKeybinds = true,
 
@@ -125,7 +101,6 @@ local Library = {
     ForceCheckbox = false,
     CantDragForced = false,
 
-    --// Signals \\--
     Signals = {},
     UnloadSignals = {},
 
@@ -134,7 +109,6 @@ local Library = {
     DPIScale = 1,
     CornerRadius = 6,
 
-    --// Scheme \\--
     IsLightTheme = false,
     Scheme = {
         BackgroundColor = Color3.fromRGB(11, 11, 13),
@@ -176,7 +150,6 @@ if Library.IsMobile then
     Library.MinSize = Library.OriginalMinSize
 end
 
---// Templates \\--
 local Templates = {
     Frame = { BorderSizePixel = 0 },
     ImageLabel = { BackgroundTransparency = 1, BorderSizePixel = 0 },
@@ -387,7 +360,6 @@ local Templates = {
 
 local SideIndex = { left = 1, right = 2 }
 
---// Scheme lookups \\--
 local SchemeAlias = { Red = "RedColor", White = "WhiteColor", Dark = "DarkColor" }
 
 local function GetSchemeValue(Index)
@@ -405,7 +377,6 @@ local function GetSchemeValue(Index)
     return nil
 end
 
---// Small helpers \\--
 local function IsMouseInput(Input: InputObject, IncludeM2: boolean?)
     return Input.UserInputType == Enum.UserInputType.MouseButton1
         or (IncludeM2 == true and Input.UserInputType == Enum.UserInputType.MouseButton2)
@@ -506,7 +477,6 @@ local function GetTeams()
     return List
 end
 
---// Registry \\--
 function Library:AddToRegistry(Instance, Properties)
     Library.Registry[Instance] = Properties
 end
@@ -589,13 +559,11 @@ function Library:SafeCallback(Func, ...)
 end
 
 function Library:AttemptSave()
-    -- Linoria compatibility; SaveManager is opt-in.
     if Library.SaveManager and Library.SaveManager.Save then
         pcall(Library.SaveManager.Save, Library.SaveManager)
     end
 end
 
---// Fonts \\--
 local function FontWeight(Weight: Enum.FontWeight)
     return function()
         local Base = Library.Scheme.Font
@@ -610,7 +578,6 @@ local MonoFont = function()
     return Font.new("rbxasset://fonts/families/RobotoMono.json", Enum.FontWeight.Medium)
 end
 
---// Derived colours (functions are re-evaluated on theme change) \\--
 local Colors = {
     Hover = function()
         return Library:GetBetterColor(Library.Scheme.MainColor, 7)
@@ -643,7 +610,6 @@ local Colors = {
 }
 Library.Colors = Colors
 
---// Creator \\--
 local function FillInstance(Table, Instance)
     local ThemeProperties = Library.Registry[Instance] or {}
 
@@ -749,7 +715,6 @@ local function Scale(Parent, Offset)
     return S
 end
 
---// Colour helpers \\--
 function Library:GetBetterColor(Color: Color3, Add: number): Color3
     Add = Add * (Library.IsLightTheme and -4 or 2)
     return Color3.fromRGB(
@@ -804,7 +769,6 @@ local function GetMouse(): Vector2
     return UserInputService:GetMouseLocation() - Vector2.new(0, 0)
 end
 
---// Icons (lucide) \\--
 local Icons = nil
 local FetchIcons = false
 
@@ -854,7 +818,6 @@ function Library:GetCustomIcon(IconName: any): any
     return Library:GetIcon(IconName)
 end
 
---// Fallback glyphs used when lucide could not be fetched (e.g. plain Studio) \\--
 local IconFallbacks = {
     ["chevron-down"] = "▾",
     ["chevron-up"] = "▴",
@@ -919,7 +882,6 @@ function Library:ApplyIcon(ImageGui: ImageLabel, IconName: any)
     return false
 end
 
--- Obsidian compatibility alias
 function Library:ApplyLucideIcon(ImageGui, Icon, Rotation)
     if Rotation then
         ImageGui.Rotation = Rotation
@@ -942,7 +904,6 @@ local function IconLabel(Properties: { [string]: any }, IconName: any)
     return Label, Applied
 end
 
---// ScreenGui \\--
 local function SafeParentUI(Object: Instance, Parent)
     local Ok = pcall(function()
         local Destination = typeof(Parent) == "function" and Parent() or Parent or CoreGui
@@ -979,7 +940,6 @@ local function SetAlwaysOnTop(Gui: ScreenGui, Enabled: boolean)
     Gui.DisplayOrder = Enabled and 99999 or 999
 end
 
--- Layers (ZIndexBehavior.Sibling keeps every layer strictly above the one before it)
 local WindowLayer = New("Frame", { Name = "Windows", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 1, Parent = ScreenGui })
 local DraggableLayer = New("Frame", { Name = "Draggables", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 5, Parent = ScreenGui })
 local Floats = New("Frame", { Name = "Floats", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 50, Parent = ScreenGui })
@@ -988,14 +948,12 @@ local TooltipLayer = New("Frame", { Name = "Tooltips", BackgroundTransparency = 
 local CursorLayer = New("Frame", { Name = "Cursor", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 100, Parent = ScreenGui })
 Library.Floats = Floats
 
--- Mouse position in the same space as GuiObject.AbsolutePosition (handles the topbar inset either way)
 local function GetMouseAbs(): Vector2
     return UserInputService:GetMouseLocation() + Floats.AbsolutePosition
 end
 Library.GetMouseAbs = GetMouseAbs
 Library.WindowContainer = WindowLayer
 
---// Modal button: unlocks the mouse in first person while the menu is open \\--
 local ModalElement = New("TextButton", {
     BackgroundTransparency = 1,
     Modal = false,
@@ -1005,7 +963,6 @@ local ModalElement = New("TextButton", {
     Parent = ScreenGui,
 })
 
---// Custom cursor (Obsidian cross, Linoria-style outline) \\--
 local Cursor
 do
     Cursor = New("Frame", {
@@ -1043,8 +1000,6 @@ function Library:ResetCursorCross()
     Library:ChangeCursorCrossColor(Library.Scheme.WhiteColor)
 end
 
---// Popups (dropdown lists, colour pickers, mode menus) \\--
---   Every popup lives in the Floats layer, follows its owner each frame, and closes on an outside click.
 local Popups = {}
 
 local function CreatePopup(Owner: GuiObject, Options: { Width: number?, Offset: Vector2?, MatchWidth: boolean?, Align: string? })
@@ -1074,7 +1029,6 @@ local function CreatePopup(Owner: GuiObject, Options: { Width: number?, Offset: 
         if not Owner.Parent then
             return
         end
-        -- AbsolutePosition can be shifted by the topbar inset; convert it into the Floats layer's space
         local Pos = Owner.AbsolutePosition - Floats.AbsolutePosition
         local Size = Owner.AbsoluteSize
         local Offset = Options.Offset or Vector2.new(0, 6)
@@ -1115,7 +1069,6 @@ local function CreatePopup(Owner: GuiObject, Options: { Width: number?, Offset: 
                 Popup:Close()
                 return
             end
-            -- close when the owner gets hidden (tab switch, menu toggled, collapsed groupbox)
             local Visible = true
             local Node = Owner
             while Node and Node:IsA("GuiObject") do
@@ -1204,7 +1157,6 @@ Library:GiveSignal(UserInputService.InputBegan:Connect(function(Input)
                 break
             end
         end
-        -- clicks inside a popup that was opened from this popup (nested) keep it alive
         for _, Other in Popups do
             if Other ~= Popup and Other.Active and Popup.Frame:IsAncestorOf(Other.Owner) and Library:MouseIsOverFrame(Other.Frame, Mouse) then
                 Inside = true
@@ -1217,7 +1169,6 @@ Library:GiveSignal(UserInputService.InputBegan:Connect(function(Input)
     end
 end))
 
---// Tooltips \\--
 local TooltipLabel
 do
     TooltipLabel = New("TextLabel", {
@@ -1290,7 +1241,6 @@ function Library:AddTooltip(InfoStr: string?, DisabledInfoStr: string?, HoverIns
     return TooltipTable
 end
 
---// Dragging & resizing \\--
 function Library:MakeDraggable(UI: GuiObject, DragFrame: GuiObject, IgnoreToggled: boolean?, IsMainWindow: boolean?)
     local StartPos, FramePos
     local Dragging = false
@@ -1417,7 +1367,6 @@ function Library:OnUnload(Callback)
     table.insert(Library.UnloadSignals, Callback)
 end
 
---// Draggable helpers (watermark, keybind list, mobile buttons) \\--
 local function DraggableShell(Name: string?)
     local Holder = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.XY,
@@ -1430,7 +1379,6 @@ local function DraggableShell(Name: string?)
     Stroke(Holder)
     Scale(Holder)
 
-    -- soft accent sheen along the top edge (outside of any layout)
     local Sheen = New("Frame", {
         BackgroundColor3 = "AccentColor",
         BackgroundTransparency = 0.82,
@@ -1449,7 +1397,6 @@ local function DraggableShell(Name: string?)
         Parent = Sheen,
     })
 
-    -- all content goes in here so nothing decorative ends up inside a layout
     local Content = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.XY,
         BackgroundTransparency = 1,
@@ -1462,7 +1409,6 @@ local function DraggableShell(Name: string?)
 end
 
 local function AccentTile(Parent, IconName, Size, LayoutOrder)
-    -- neutral tile, the icon carries the accent
     local Tile = New("Frame", {
         BackgroundColor3 = "MainColor",
         LayoutOrder = LayoutOrder or 0,
@@ -1640,9 +1586,7 @@ function Library:AddDraggableMenu(Name: string, Icon: string?)
     return Holder, Container
 end
 
---// Watermark \\--
 do
-    -- [icon tile]  Title  |  text
     local Watermark = Library:AddDraggableLabel("")
     Watermark:SetVisible(false)
     Library.Watermark = Watermark
@@ -1664,7 +1608,6 @@ do
         Size = UDim2.fromOffset(1, 14),
         Parent = Content,
     })
-    -- order: tile(-2) title(-1) separator(0) text(1)
     Watermark.IconTile.LayoutOrder = -2
     TitleLabel.LayoutOrder = -1
     Watermark.Label.TextTransparency = 0.35
@@ -1686,7 +1629,6 @@ do
     end
 end
 
---// Keybind list \\--
 do
     Library.KeybindFrame, Library.KeybindContainer = Library:AddDraggableMenu("Keybinds", "keyboard")
     Library.KeybindFrame.AnchorPoint = Vector2.new(0, 0.5)
@@ -1694,8 +1636,6 @@ do
     Library.KeybindFrame.Visible = false
 end
 
-
---// Keybind list entries \\--
 local function CreateKeybindEntry()
     local Entry = { Loaded = true, Normal = true, State = false }
 
@@ -1881,7 +1821,6 @@ do
             if not table.find(Info.Modes, KeyPicker.Mode) then
                 KeyPicker.Mode = "Toggle"
             end
-            -- start in sync with the toggle instead of forcing it off
             if ParentObj.Type == "Toggle" then
                 KeyPicker.Toggled = ParentObj.Value == true
             end
@@ -1915,7 +1854,6 @@ do
             KeyPicker:Update()
         end)
 
-        --// Mode menu \\--
         local MenuTable = CreatePopup(Picker, { Width = 96, Align = "Right" })
         List(MenuTable.Frame, 2)
         Padding(MenuTable.Frame, 4)
@@ -2055,7 +1993,6 @@ do
             end
 
             if ParentObj.Type == "Toggle" and KeyPicker.SyncToggleState == false and KeyPicker.Mode == "Toggle" then
-                -- plain Obsidian behaviour: the bind only fires callbacks, the toggle keeps its own state
             end
 
             Library:SafeCallback(KeyPicker.Callback, KeyPicker.Toggled)
@@ -2172,7 +2109,6 @@ do
             local ActiveModifiers = {}
             local CurrentInput
 
-            -- skip the click that started picking
             task.wait()
 
             while true do
@@ -2188,7 +2124,6 @@ do
                 end
             end
 
-            -- modifier: wait for release (bind the modifier itself) or for a follow-up key
             while CurrentInput.UserInputType == Enum.UserInputType.Keyboard and ModifiersInput[CurrentInput.KeyCode] do
                 local ModName = ModifiersInput[CurrentInput.KeyCode]
                 KeyPicker:Display((#ActiveModifiers > 0 and table.concat(ActiveModifiers, " + ") .. " + " or "") .. ModName .. " + ...")
@@ -2235,7 +2170,6 @@ do
             KeyPicker.Toggled = ParentObj.Type == "Toggle" and ParentObj.Value or false
             KeyPicker:SetValue({ Key, KeyPicker.Mode, ActiveModifiers })
 
-            -- wait for the bound key to be released so it doesn't immediately fire
             repeat
                 task.wait()
             until Library.Unloaded
@@ -2359,7 +2293,6 @@ do
         return self
     end
 
-    --// Colour picker \\--
     local HueSequenceTable = {}
     for Hue = 0, 1, 0.1 do
         table.insert(HueSequenceTable, ColorSequenceKeypoint.new(Hue, Color3.fromHSV(Hue, 1, 1)))
@@ -2407,7 +2340,6 @@ do
         })
         Corner(HolderTransparency, 4)
 
-        --// Popup \\--
         local Menu = CreatePopup(Holder, { Width = 236, Align = "Right" })
         local MenuFrame = Menu.Frame
         MenuFrame.AutomaticSize = Enum.AutomaticSize.Y
@@ -2531,8 +2463,6 @@ do
         local HexBox = InfoBox(UDim2.new(0.42, -3, 1, 0), 1)
         local RgbBox = InfoBox(UDim2.new(0.58, -3, 1, 0), 2)
 
-        --// End popup \\--
-
         function ColorPicker:SetHSVFromRGB(Color)
             ColorPicker.Hue, ColorPicker.Sat, ColorPicker.Vib = Color:ToHSV()
         end
@@ -2607,7 +2537,6 @@ do
             Menu:Toggle()
         end))
 
-        -- right click copies / pastes the colour (Linoria-style)
         table.insert(ColorPicker.Connections, Holder.MouseButton2Click:Connect(function()
             if ParentObj.Disabled then
                 return
@@ -2634,7 +2563,7 @@ do
                     ColorPicker:Display()
                 end
                 Step()
-                while UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or Input.UserInputState ~= Enum.UserInputState.End and Input.UserInputType == Enum.UserInputType.Touch do
+                while Input.UserInputState ~= Enum.UserInputState.End and Input.UserInputState ~= Enum.UserInputState.Cancel do
                     RunService.RenderStepped:Wait()
                     if Library.Unloaded then
                         return
@@ -2713,8 +2642,6 @@ do
     BaseAddons.__index = Funcs
 end
 
-
---// Shared element plumbing \\--
 local function AttachAddonHolder(Element, Row: GuiObject, Label: GuiObject, LeftInset: number?, Extra: GuiObject?)
     local Holder = New("Frame", {
         AnchorPoint = Vector2.new(1, 0.5),
@@ -2780,7 +2707,6 @@ local BaseGroupbox = {}
 do
     local Funcs = {}
 
-    --// Divider \\--
     function Funcs:AddDivider(...)
         if self.Destroyed then
             return nil
@@ -2867,7 +2793,6 @@ do
         return Divider
     end
 
-    --// Label \\--
     function Funcs:AddLabel(...)
         if self.Destroyed then
             return nil
@@ -2962,7 +2887,6 @@ do
         return setmetatable(Label, BaseAddons)
     end
 
-    --// Button \\--
     function Funcs:AddButton(...)
         if self.Destroyed then
             return nil
@@ -3090,7 +3014,6 @@ do
                 Tween(Label, Library.TweenInfo, { TextTransparency = 0.15 })
             end)
 
-            -- ripple-free press feedback: quick accent stroke flash
             local function Flash()
                 BaseStroke.Color = Library.Scheme.AccentColor
                 Tween(BaseStroke, Library.SlowTweenInfo, { Color = Library.Scheme.OutlineColor })
@@ -3227,7 +3150,6 @@ do
             return setmetatable(SubButton, BaseAddons)
         end
 
-        -- Button visibility hides the whole row (sub buttons included), like Obsidian
         function Button:SetVisible(Visible: boolean)
             Button.Visible = Visible
             Holder.Visible = Visible
@@ -3259,7 +3181,6 @@ do
         return setmetatable(Button, BaseAddons)
     end
 
-    --// Toggle shared logic \\--
     local function BuildToggle(Groupbox, Idx, Info, Variant: string)
         local Toggle = {
             Connections = {},
@@ -3515,7 +3436,6 @@ do
         return BuildToggle(self, Idx, Info, "Switch")
     end
 
-    --// Input \\--
     function Funcs:AddInput(Idx, Info)
         if self.Destroyed then
             return nil
@@ -3715,7 +3635,6 @@ do
         return Input
     end
 
-    --// Slider \\--
     function Funcs:AddSlider(Idx, Info)
         if self.Destroyed then
             return nil
@@ -3976,7 +3895,7 @@ do
                     Library:SafeCallback(Slider.Callback, Slider.Value)
                     Library:SafeCallback(Slider.Changed, Slider.Value)
                 end
-                if not (UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton1) or (Input.UserInputType == Enum.UserInputType.Touch and Input.UserInputState ~= Enum.UserInputState.End)) then
+                if Input.UserInputState == Enum.UserInputState.End or Input.UserInputState == Enum.UserInputState.Cancel then
                     break
                 end
                 RunService.RenderStepped:Wait()
@@ -3991,7 +3910,6 @@ do
             local _ = Before
         end))
 
-        -- Right click: type an exact value
         local TypeBox
         if Slider.AllowRightClickInput then
             table.insert(Slider.Connections, Bar.MouseButton2Click:Connect(function()
@@ -4063,7 +3981,6 @@ do
         return Slider
     end
 
-    --// Dropdown \\--
     function Funcs:AddDropdown(Idx, Info)
         if self.Destroyed then
             return nil
@@ -4155,7 +4072,6 @@ do
         Dropdown.TextLabel = Label
         Dropdown.DisplayFrame = Display
 
-        --// List popup \\--
         local Popup = CreatePopup(Display, { MatchWidth = true })
         local ListFrame = Popup.Frame
         ListFrame.ClipsDescendants = true
@@ -4659,7 +4575,6 @@ do
             end))
         end
 
-        --// Defaults \\--
         local Defaults = {}
         do
             local Default = Info.Default
@@ -4725,7 +4640,6 @@ do
         return Dropdown
     end
 
-    --// Media / passthrough \\--
     local function MediaFrame(Groupbox, Height, Visible)
         local Holder = New("Frame", {
             BackgroundColor3 = "BackgroundColor",
@@ -4935,7 +4849,6 @@ do
                 return
             end
             Focus = CF.Position
-            -- face the model's front
             local Look = (Object:IsA("Model") and Object:GetPivot() or CF).LookVector
             Yaw = math.atan2(Look.X, Look.Z)
             Distance = Size.Magnitude * 1.1 / math.tan(math.rad(Camera.FieldOfView / 2)) / 2 + 1
@@ -5003,7 +4916,6 @@ do
         return Viewport
     end
 
-    --// Dependency boxes \\--
     local function EvaluateDependencies(Dependencies)
         for _, Dependency in Dependencies do
             local Element, Expected = Dependency[1], Dependency[2]
@@ -5156,8 +5068,6 @@ end
 
 function Library:UpdateAddons() end
 
-
---// Search \\--
 local function ElementMatches(Element, Query)
     local Text = Element.Text
     if typeof(Text) ~= "string" then
@@ -5242,7 +5152,6 @@ function Library:UpdateSearch(SearchText: string)
     end
 end
 
---// Window \\--
 function Library:CreateWindow(WindowInfo)
     WindowInfo = Library:Validate(WindowInfo, Templates.Window)
 
@@ -5292,7 +5201,6 @@ function Library:CreateWindow(WindowInfo)
         Info = WindowInfo,
     }
 
-    --// Shell \\--
     local Holder = New("Frame", {
         AnchorPoint = WindowInfo.Center and Vector2.new(0.5, 0.5) or Vector2.zero,
         BackgroundTransparency = 1,
@@ -5303,7 +5211,6 @@ function Library:CreateWindow(WindowInfo)
     })
     local WindowScale = Scale(Holder)
 
-    -- convert a centred anchor into an absolute offset so dragging behaves
     task.defer(function()
         if WindowInfo.Center then
             local Abs = Holder.AbsolutePosition
@@ -5348,7 +5255,6 @@ function Library:CreateWindow(WindowInfo)
     })
     ScaledCorner(BackgroundImage, 1)
 
-    -- Linoria accent strip (soft-faded at the corners)
     local AccentStrip = New("Frame", {
         BackgroundColor3 = "AccentColor",
         BorderSizePixel = 0,
@@ -5368,7 +5274,6 @@ function Library:CreateWindow(WindowInfo)
         Parent = AccentStrip,
     })
 
-    --// Top bar \\--
     local TopBar = New("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, TopHeight),
@@ -5392,7 +5297,6 @@ function Library:CreateWindow(WindowInfo)
     })
     List(TitleRow, 10, Enum.FillDirection.Horizontal, nil, Enum.VerticalAlignment.Center)
 
-    -- Logo: only an image asset (number or "rbxassetid://..."), shown as-is. No asset = no logo.
     local Logo = New("ImageLabel", {
         BackgroundTransparency = 1,
         LayoutOrder = 0,
@@ -5461,7 +5365,6 @@ function Library:CreateWindow(WindowInfo)
         Parent = TabInfoHolder,
     })
 
-    -- Search
     local SearchFrame = New("Frame", {
         AnchorPoint = Vector2.new(1, 0.5),
         BackgroundColor3 = "MainColor",
@@ -5516,7 +5419,6 @@ function Library:CreateWindow(WindowInfo)
         SearchBox.Text = ""
     end)
 
-    --// Footer \\--
     local Footer = New("Frame", {
         AnchorPoint = Vector2.new(0, 1),
         BackgroundTransparency = 1,
@@ -5557,7 +5459,6 @@ function Library:CreateWindow(WindowInfo)
         HoverTween(ResizeGrip, "ImageTransparency", 0.6, 0.1)
     end
 
-    --// Sidebar \\--
     local Sidebar = New("Frame", {
         BackgroundTransparency = 1,
         Position = UDim2.fromOffset(0, TopHeight),
@@ -5597,7 +5498,6 @@ function Library:CreateWindow(WindowInfo)
     })
     Padding(NavLabel, 0, 0, 4, 10)
 
-    -- Profile card pinned to the bottom of the sidebar
     local Profile = New("Frame", {
         AnchorPoint = Vector2.new(0, 1),
         BackgroundColor3 = "MainColor",
@@ -5652,7 +5552,6 @@ function Library:CreateWindow(WindowInfo)
     })
     Window.Profile = Profile
 
-    --// Content \\--
     local Content = New("Frame", {
         BackgroundTransparency = 1,
         ClipsDescendants = true,
@@ -5673,7 +5572,6 @@ function Library:CreateWindow(WindowInfo)
         Library:MakeResizable(Holder, ResizeGrip)
     end
 
-    --// Window API \\--
     function Window:ChangeTitle(Title)
         TitleLabel.Text = tostring(Title)
     end
@@ -5755,7 +5653,6 @@ function Library:CreateWindow(WindowInfo)
         TabInfoHolder.Visible = false
     end
 
-    --// Tabs \\--
     local TabOrderCounter = 0
 
     local function CreateTabButton(Name, Icon, Order)
@@ -5769,7 +5666,6 @@ function Library:CreateWindow(WindowInfo)
         })
         ScaledCorner(Button, 0.75)
 
-        -- active state: neutral raised surface; only the icon + indicator use the accent
         local Highlight = New("Frame", {
             BackgroundColor3 = "MainColor",
             BackgroundTransparency = 1,
@@ -5980,7 +5876,6 @@ function Library:CreateWindow(WindowInfo)
 
         local Container = BuildTabCore(Tab, Name, Icon, Description, Order, false)
 
-        -- Warning box
         local WarningBox = New("Frame", {
             AutomaticSize = Enum.AutomaticSize.Y,
             BackgroundColor3 = "RedColor",
@@ -6033,7 +5928,13 @@ function Library:CreateWindow(WindowInfo)
             Size = UDim2.fromScale(1, 1),
             Parent = Container,
         })
-        Tab.AnimatedFrame = Columns
+        local Inner = New("Frame", {
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 1),
+            Parent = Columns,
+        })
+        Tab.AnimatedFrame = Inner
+        Tab.AnimatedTarget = UDim2.fromOffset(0, 0)
 
         local function MakeSide(Index)
             local Side = New("ScrollingFrame", {
@@ -6046,7 +5947,7 @@ function Library:CreateWindow(WindowInfo)
                 ScrollingDirection = Enum.ScrollingDirection.Y,
                 Size = UDim2.new(0.5, 0, 1, 0),
                 VerticalScrollBarInset = Enum.ScrollBarInset.None,
-                Parent = Columns,
+                Parent = Inner,
             })
             List(Side, 10)
             Padding(Side, 12, Index == 1 and 6 or 12, 12, Index == 1 and 12 or 6)
@@ -6059,13 +5960,12 @@ function Library:CreateWindow(WindowInfo)
             local Offset = WarningBox.Visible and (WarningBox.AbsoluteSize.Y / Library.DPIScale + 12) or 0
             Columns.Size = UDim2.new(1, 0, 1, -Offset)
             Columns.Position = UDim2.fromOffset(0, Offset)
-            Tab.AnimatedFrame = Columns
-            Tab.AnimatedTarget = Columns.Position
         end
         WarningBox:GetPropertyChangedSignal("AbsoluteSize"):Connect(Relayout)
         WarningBox:GetPropertyChangedSignal("Visible"):Connect(Relayout)
-
-        -- the slide animation tweens Position, so keep the warning offset applied on top
+        Container:GetPropertyChangedSignal("Visible"):Connect(function()
+            task.defer(Relayout)
+        end)
 
         function Tab:UpdateWarningBox(Info)
             Info = Info or {}
@@ -6089,6 +5989,7 @@ function Library:CreateWindow(WindowInfo)
             WarningIcon.ImageColor3 = Library.Scheme[Key]
             Library:ApplyIcon(WarningIcon, Info.IsNormal and "info" or "triangle-alert")
             Relayout()
+            task.defer(Relayout)
         end
 
         function Tab:RefreshSides() end
@@ -6096,7 +5997,6 @@ function Library:CreateWindow(WindowInfo)
 
         local GroupboxOrder = 0
 
-        --// Groupbox \\--
         function Tab:AddGroupbox(Info)
             Info = Library:Validate(Info, Templates.Groupbox)
             if typeof(Info.Side) == "string" then
@@ -6271,7 +6171,6 @@ function Library:CreateWindow(WindowInfo)
                 end
             end
 
-            -- pop-out windows are not part of Onyx; keep the API surface so SaveManager & scripts don't break
             function Groupbox:SetPoppedOut() end
             function Groupbox:TogglePoppedOut() end
             function Groupbox:RefreshPopOutPlaceholder() end
@@ -6333,7 +6232,6 @@ function Library:CreateWindow(WindowInfo)
             return Tab:AddGroupbox({ Side = 2, Name = Name, IconName = IconName, Visible = Visible, Collapsed = Collapsed, DisableCollapsing = DisableCollapsing })
         end
 
-        --// Tabbox \\--
         function Tab:AddTabbox(Info)
             Info = Library:Validate(Info, Templates.Tabbox)
             if typeof(Info.Side) == "string" then
@@ -6358,7 +6256,6 @@ function Library:CreateWindow(WindowInfo)
             Stroke(Box)
             List(Box, 0)
 
-            -- Header row holds a segmented control; decorations live outside the layout
             local HeaderRow = New("Frame", {
                 BackgroundTransparency = 1,
                 Size = UDim2.new(1, 0, 0, 46),
@@ -6607,7 +6504,6 @@ function Library:CreateWindow(WindowInfo)
         return Tab
     end
 
-    --// Key tab (single centred column for key systems) \\--
     function Window:AddKeyTab(...)
         local Name, Icon, Description, Tooltip, Order = ParseTabArgs(...)
         Icon = Icon or "key"
@@ -6739,7 +6635,6 @@ function Library:CreateWindow(WindowInfo)
         return Tab
     end
 
-    --// Dialogs \\--
     local DialogOverlay = New("TextButton", {
         AutoButtonColor = false,
         BackgroundColor3 = "DarkColor",
@@ -6985,7 +6880,6 @@ function Library:CreateWindow(WindowInfo)
         return Dialog
     end
 
-    --// Toggle \\--
     local ToggleTween
     function Window:Toggle(Value: boolean?)
         if Library.Unloaded then
@@ -7031,7 +6925,6 @@ function Library:CreateWindow(WindowInfo)
             end
         end
 
-        -- custom cursor
         if Open and Library.ShowCustomCursor then
             task.spawn(function()
                 local Binding = "OnyxCursor"
@@ -7061,7 +6954,6 @@ function Library:CreateWindow(WindowInfo)
         Window:Toggle(Value)
     end
 
-    --// Mobile toggle button \\--
     if Library.IsMobile and WindowInfo.ShowMobileButtons then
         local MobileButton = Library:AddDraggableButton("Menu", function()
             Library:Toggle()
@@ -7070,7 +6962,6 @@ function Library:CreateWindow(WindowInfo)
         Library.MobileButton = MobileButton
     end
 
-    --// Menu keybind \\--
     Library:GiveSignal(UserInputService.InputBegan:Connect(function(Input: InputObject, Processed)
         if Library.Unloaded then
             return
@@ -7104,8 +6995,6 @@ function Library:CreateWindow(WindowInfo)
     return Window
 end
 
-
---// Theme setters \\--
 function Library:SetFont(FontFace)
     if typeof(FontFace) == "EnumItem" then
         FontFace = Font.fromEnum(FontFace)
@@ -7140,7 +7029,6 @@ function Library:SetDPIScale(DPIScale: number)
     end
 end
 
---// Notifications \\--
 local NotificationArea = New("Frame", {
     AnchorPoint = Vector2.new(1, 0),
     BackgroundTransparency = 1,
@@ -7209,7 +7097,6 @@ function Library:Notify(...)
     ScaledCorner(Card, 1)
     Stroke(Card)
 
-    -- slim accent pill on the left (Linoria's accent edge)
     local Edge = New("Frame", {
         BackgroundColor3 = "AccentColor",
         Position = UDim2.fromOffset(0, 10),
@@ -7380,7 +7267,6 @@ function Library:Notify(...)
     return Data
 end
 
---// Loading screen \\--
 function Library:CreateLoading(LoadingInfo)
     if Library.ActiveLoading then
         return Library.ActiveLoading
@@ -7501,7 +7387,6 @@ function Library:CreateLoading(LoadingInfo)
         Parent = Inner,
     })
 
-    -- Sidebar page: a groupbox-like area scripts can add elements to
     local SidebarBox = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = "MainColor",
@@ -7521,7 +7406,6 @@ function Library:CreateLoading(LoadingInfo)
         Resize = function() end,
     }, BaseGroupbox)
 
-    -- Error page
     local ErrorBox = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
@@ -7650,7 +7534,6 @@ function Library:CreateLoading(LoadingInfo)
     return Loading
 end
 
---// Player / team dropdowns \\--
 local function OnPlayerChange()
     if Library.Unloaded then
         return
@@ -7680,7 +7563,6 @@ Library:GiveSignal(Players.PlayerRemoving:Connect(OnPlayerChange))
 Library:GiveSignal(Teams.ChildAdded:Connect(OnTeamChange))
 Library:GiveSignal(Teams.ChildRemoved:Connect(OnTeamChange))
 
---// Unload \\--
 function Library:Unload()
     if Library.Unloaded then
         return
