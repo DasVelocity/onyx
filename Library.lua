@@ -137,11 +137,11 @@ local Library = {
     --// Scheme \\--
     IsLightTheme = false,
     Scheme = {
-        BackgroundColor = Color3.fromRGB(13, 13, 16),
-        MainColor = Color3.fromRGB(22, 22, 27),
-        AccentColor = Color3.fromRGB(118, 102, 255),
-        OutlineColor = Color3.fromRGB(38, 38, 46),
-        FontColor = Color3.fromRGB(236, 236, 241),
+        BackgroundColor = Color3.fromRGB(11, 11, 13),
+        MainColor = Color3.fromRGB(19, 19, 22),
+        AccentColor = Color3.fromRGB(239, 52, 64),
+        OutlineColor = Color3.fromRGB(34, 34, 40),
+        FontColor = Color3.fromRGB(240, 240, 243),
         Font = Font.fromEnum(Enum.Font.BuilderSans),
 
         RedColor = Color3.fromRGB(255, 72, 72),
@@ -987,6 +987,12 @@ local NotificationLayer = New("Frame", { Name = "Notifications", BackgroundTrans
 local TooltipLayer = New("Frame", { Name = "Tooltips", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 90, Parent = ScreenGui })
 local CursorLayer = New("Frame", { Name = "Cursor", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 100, Parent = ScreenGui })
 Library.Floats = Floats
+
+-- Mouse position in the same space as GuiObject.AbsolutePosition (handles the topbar inset either way)
+local function GetMouseAbs(): Vector2
+    return UserInputService:GetMouseLocation() + Floats.AbsolutePosition
+end
+Library.GetMouseAbs = GetMouseAbs
 Library.WindowContainer = WindowLayer
 
 --// Modal button: unlocks the mouse in first person while the menu is open \\--
@@ -1068,10 +1074,11 @@ local function CreatePopup(Owner: GuiObject, Options: { Width: number?, Offset: 
         if not Owner.Parent then
             return
         end
-        local Pos = Owner.AbsolutePosition
+        -- AbsolutePosition can be shifted by the topbar inset; convert it into the Floats layer's space
+        local Pos = Owner.AbsolutePosition - Floats.AbsolutePosition
         local Size = Owner.AbsoluteSize
-        local Offset = Options.Offset or Vector2.new(0, 4)
-        local GuiInset = ScreenGui.IgnoreGuiInset and Vector2.zero or select(1, game:GetService("GuiService"):GetGuiInset())
+        local Offset = Options.Offset or Vector2.new(0, 6)
+        local GuiInset = Vector2.zero
 
         if Options.MatchWidth then
             Frame.Size = UDim2.fromOffset(Size.X / Library.DPIScale, Frame.Size.Y.Offset)
@@ -1181,10 +1188,7 @@ Library:GiveSignal(UserInputService.InputBegan:Connect(function(Input)
     if Library.Unloaded or not IsClickInput(Input, true) then
         return
     end
-    local Mouse = Vector2.new(Input.Position.X, Input.Position.Y)
-    -- Input.Position excludes the topbar inset; absolute positions include it when IgnoreGuiInset is on.
-    local Inset = game:GetService("GuiService"):GetGuiInset()
-    Mouse += Inset
+    local Mouse = GetMouseAbs()
 
     for _, Popup in table.clone(Popups) do
         if not Popup.Active then
@@ -1418,7 +1422,7 @@ local function DraggableShell(Name: string?)
     local Holder = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.XY,
         BackgroundColor3 = "BackgroundColor",
-        Position = UDim2.fromOffset(8, 8),
+        Position = UDim2.fromOffset(12, 12),
         Size = UDim2.fromOffset(0, 0),
         Parent = DraggableLayer,
     })
@@ -1426,26 +1430,57 @@ local function DraggableShell(Name: string?)
     Stroke(Holder)
     Scale(Holder)
 
-    -- Linoria-style accent strip
-    local Strip = New("Frame", {
+    -- soft accent sheen along the top edge (outside of any layout)
+    local Sheen = New("Frame", {
         BackgroundColor3 = "AccentColor",
-        Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.new(1, 0, 0, 2),
-        ZIndex = 2,
+        BackgroundTransparency = 0.82,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = 0,
         Parent = Holder,
     })
+    ScaledCorner(Sheen, 1)
     New("UIGradient", {
+        Rotation = 90,
         Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.12, 0),
-            NumberSequenceKeypoint.new(0.88, 0),
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(0.6, 1),
             NumberSequenceKeypoint.new(1, 1),
         }),
-        Parent = Strip,
+        Parent = Sheen,
     })
 
-    return Holder
+    -- all content goes in here so nothing decorative ends up inside a layout
+    local Content = New("Frame", {
+        AutomaticSize = Enum.AutomaticSize.XY,
+        BackgroundTransparency = 1,
+        Size = UDim2.fromOffset(0, 0),
+        ZIndex = 1,
+        Parent = Holder,
+    })
+
+    return Holder, Content
 end
+
+local function AccentTile(Parent, IconName, Size, LayoutOrder)
+    local Tile = New("Frame", {
+        BackgroundColor3 = "AccentColor",
+        BackgroundTransparency = 0.82,
+        LayoutOrder = LayoutOrder or 0,
+        Size = UDim2.fromOffset(Size, Size),
+        Parent = Parent,
+    })
+    Corner(Tile, math.floor(Size * 0.3))
+    Stroke(Tile, "AccentColor", 0.7)
+    local Icon, HasIcon = IconLabel({
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        ImageColor3 = "AccentColor",
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(math.floor(Size * 0.58), math.floor(Size * 0.58)),
+        Parent = Tile,
+    }, IconName)
+    return Tile, Icon, HasIcon
+end
+Library.AccentTile = AccentTile
 
 function Library:AddDraggableLabel(...)
     local Text, Icon, IconPosition
@@ -1456,35 +1491,36 @@ function Library:AddDraggableLabel(...)
         Text, Icon, IconPosition = First, select(2, ...), select(3, ...)
     end
 
-    local Holder = DraggableShell()
-    Padding(Holder, 7, 12, 7, 12)
-    List(Holder, 8, Enum.FillDirection.Horizontal, nil, Enum.VerticalAlignment.Center)
+    local Holder, Content = DraggableShell()
+    Padding(Content, 7, 12, 7, 8)
+    List(Content, 9, Enum.FillDirection.Horizontal, nil, Enum.VerticalAlignment.Center)
 
-    local IconImage = IconLabel({ Size = UDim2.fromOffset(15, 15), ImageColor3 = "AccentColor", Visible = false, LayoutOrder = IconPosition == "Right" and 2 or 0, Parent = Holder }, nil)
+    local IconTile, IconImage = AccentTile(Content, nil, 22, IconPosition == "Right" and 2 or 0)
+    IconTile.Visible = false
 
     local Label = New("TextLabel", {
-        AutomaticSize = Enum.AutomaticSize.XY,
+        AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
         FontFace = MediumFont,
-        Size = UDim2.fromOffset(0, 15),
+        Size = UDim2.fromOffset(0, 22),
         Text = Text or "",
         TextSize = 14,
         LayoutOrder = 1,
-        Parent = Holder,
+        Parent = Content,
     })
 
     Library:MakeDraggable(Holder, Holder, true)
 
-    local DraggableLabel = { Holder = Holder, Label = Label }
+    local DraggableLabel = { Holder = Holder, Label = Label, Content = Content, IconTile = IconTile }
 
     function DraggableLabel:SetText(NewText: string)
         Label.Text = NewText
     end
     function DraggableLabel:SetIcon(NewIcon: string)
-        IconImage.Visible = NewIcon ~= nil and Library:ApplyIcon(IconImage, NewIcon)
+        IconTile.Visible = NewIcon ~= nil and Library:ApplyIcon(IconImage, NewIcon)
     end
     function DraggableLabel:SetIconPosition(Position: string)
-        IconImage.LayoutOrder = Position == "Right" and 2 or 0
+        IconTile.LayoutOrder = Position == "Right" and 2 or 0
     end
     function DraggableLabel:SetVisible(Visible: boolean)
         Holder.Visible = Visible
@@ -1508,7 +1544,7 @@ function Library:AddDraggableButton(...)
         Text, Func, Icon = First, select(2, ...), select(3, ...)
     end
 
-    local Holder = DraggableShell()
+    local Holder, Content = DraggableShell()
     local Button = New("TextButton", {
         AutomaticSize = Enum.AutomaticSize.XY,
         BackgroundTransparency = 1,
@@ -1516,7 +1552,7 @@ function Library:AddDraggableButton(...)
         Size = UDim2.fromOffset(0, 0),
         Text = Text or "",
         TextSize = 14,
-        Parent = Holder,
+        Parent = Content,
     })
     Padding(Button, 8, 14, 8, 14)
     Library:MakeDraggable(Holder, Button, true)
@@ -1565,39 +1601,19 @@ function Library:AddDraggableMenu(Name: string, Icon: string?)
     Stroke(Holder)
     Scale(Holder)
 
-    local Strip = New("Frame", {
-        BackgroundColor3 = "AccentColor",
-        Size = UDim2.new(1, 0, 0, 2),
-        ZIndex = 2,
-        Parent = Holder,
-    })
-    New("UIGradient", {
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.12, 0),
-            NumberSequenceKeypoint.new(0.88, 0),
-            NumberSequenceKeypoint.new(1, 1),
-        }),
-        Parent = Strip,
-    })
-
     local Top = New("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 32),
+        Size = UDim2.new(1, 0, 0, 38),
         Parent = Holder,
     })
-    IconLabel({
-        AnchorPoint = Vector2.new(0, 0.5),
-        Position = UDim2.new(0, 12, 0.5, 0),
-        Size = UDim2.fromOffset(15, 15),
-        ImageColor3 = "AccentColor",
-        Parent = Top,
-    }, Icon or "keyboard")
+    local Tile = AccentTile(Top, Icon or "keyboard", 22)
+    Tile.AnchorPoint = Vector2.new(0, 0.5)
+    Tile.Position = UDim2.new(0, 10, 0.5, 0)
     New("TextLabel", {
         BackgroundTransparency = 1,
         FontFace = SemiBoldFont,
-        Position = UDim2.fromOffset(34, 0),
-        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.fromOffset(40, 0),
+        Size = UDim2.new(1, -46, 1, 0),
         Text = Name,
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
@@ -1613,7 +1629,7 @@ function Library:AddDraggableMenu(Name: string, Icon: string?)
     local Container = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 32),
+        Position = UDim2.fromOffset(0, 38),
         Size = UDim2.new(1, 0, 0, 0),
         Parent = Holder,
     })
@@ -1626,12 +1642,44 @@ end
 
 --// Watermark \\--
 do
+    -- [icon tile]  Title  |  text
     local Watermark = Library:AddDraggableLabel("")
     Watermark:SetVisible(false)
     Library.Watermark = Watermark
 
+    local Content = Watermark.Content
+    local TitleLabel = New("TextLabel", {
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1,
+        FontFace = BoldFont,
+        LayoutOrder = 0,
+        Size = UDim2.fromOffset(0, 22),
+        Text = "Onyx",
+        TextSize = 14,
+        Parent = Content,
+    })
+    local Separator = New("Frame", {
+        BackgroundColor3 = "OutlineColor",
+        LayoutOrder = 0,
+        Size = UDim2.fromOffset(1, 14),
+        Parent = Content,
+    })
+    -- order: tile(-2) title(-1) separator(0) text(1)
+    Watermark.IconTile.LayoutOrder = -2
+    TitleLabel.LayoutOrder = -1
+    Watermark.Label.TextTransparency = 0.35
+    Watermark:SetIcon("zap")
+
+    local Inset = game:GetService("GuiService"):GetGuiInset()
+    Watermark.Holder.Position = UDim2.fromOffset(12, Inset.Y + 10)
+
+    function Watermark:SetTitle(Text: string)
+        TitleLabel.Text = Text
+    end
+
     function Library:SetWatermark(Text: string)
         Watermark:SetText(Text)
+        Separator.Visible = Text ~= nil and Text ~= ""
     end
 
     function Library:SetWatermarkVisibility(Visible: boolean)
@@ -1833,6 +1881,10 @@ do
             Info.Modes = { "Toggle", "Hold" }
             if not table.find(Info.Modes, KeyPicker.Mode) then
                 KeyPicker.Mode = "Toggle"
+            end
+            -- start in sync with the toggle instead of forcing it off
+            if ParentObj.Type == "Toggle" then
+                KeyPicker.Toggled = ParentObj.Value == true
             end
         end
         if #KeyPicker.Modifiers > 0 then
@@ -2574,7 +2626,7 @@ do
                     return
                 end
                 local function Step()
-                    local Mouse = UserInputService:GetMouseLocation()
+                    local Mouse = GetMouseAbs()
                     local Pos, Size = Target.AbsolutePosition, Target.AbsoluteSize
                     OnMove(Vector2.new(
                         math.clamp((Mouse.X - Pos.X) / Size.X, 0, 1),
@@ -3746,7 +3798,7 @@ do
         })
         Corner(Fill, Compact and math.max(4, Library.CornerRadius - 2) or 4)
         New("UIGradient", {
-            Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(200, 200, 200)),
+            Color = ColorSequence.new(Color3.fromRGB(130, 130, 130), Color3.new(1, 1, 1)),
             Parent = Fill,
         })
 
@@ -3898,7 +3950,7 @@ do
 
         local Dragging = false
         local function ValueFromMouse()
-            local Mouse = UserInputService:GetMouseLocation()
+            local Mouse = GetMouseAbs()
             local Scale_ = math.clamp((Mouse.X - Bar.AbsolutePosition.X) / Bar.AbsoluteSize.X, 0, 1)
             return Slider.Min + (Slider.Max - Slider.Min) * Scale_
         end
@@ -4863,7 +4915,7 @@ do
             ViewportFrame = ViewportFrame,
         }
 
-        local Yaw, Pitch, Distance = 0, -0.2, 10
+        local Yaw, Pitch, Distance = math.pi, -0.15, 10
         local Focus = Vector3.zero
         local function UpdateCamera()
             local Rotation = CFrame.Angles(0, Yaw, 0) * CFrame.Angles(Pitch, 0, 0)
@@ -4884,6 +4936,9 @@ do
                 return
             end
             Focus = CF.Position
+            -- face the model's front
+            local Look = (Object:IsA("Model") and Object:GetPivot() or CF).LookVector
+            Yaw = math.atan2(Look.X, Look.Z)
             Distance = Size.Magnitude * 1.1 / math.tan(math.rad(Camera.FieldOfView / 2)) / 2 + 1
             UpdateCamera()
         end
@@ -4933,7 +4988,7 @@ do
                 Yaw -= Delta.X * 0.01
                 Pitch = math.clamp(Pitch - Delta.Y * 0.01, -1.4, 1.4)
                 UpdateCamera()
-            elseif Viewport.Interactive and Input.UserInputType == Enum.UserInputType.MouseWheel and Library:MouseIsOverFrame(Holder, UserInputService:GetMouseLocation()) then
+            elseif Viewport.Interactive and Input.UserInputType == Enum.UserInputType.MouseWheel and Library:MouseIsOverFrame(Holder, GetMouseAbs()) then
                 Distance = math.max(1, Distance * (1 - Input.Position.Z * 0.1))
                 UpdateCamera()
             end
@@ -5299,32 +5354,34 @@ function Library:CreateWindow(WindowInfo)
         BackgroundColor3 = "AccentColor",
         BorderSizePixel = 0,
         Position = UDim2.fromOffset(0, 0),
-        Size = UDim2.new(1, 0, 0, 2),
+        Size = UDim2.new(1, 0, 0, 1),
         ZIndex = 3,
         Parent = Main,
     })
     New("UIGradient", {
         Transparency = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.06, 0.15),
-            NumberSequenceKeypoint.new(0.5, 0),
-            NumberSequenceKeypoint.new(0.94, 0.15),
+            NumberSequenceKeypoint.new(0.15, 0.6),
+            NumberSequenceKeypoint.new(0.35, 0),
+            NumberSequenceKeypoint.new(0.65, 0.6),
             NumberSequenceKeypoint.new(1, 1),
         }),
         Parent = AccentStrip,
     })
+    -- soft red haze bleeding down from the top-left corner
     local AccentGlow = New("Frame", {
         BackgroundColor3 = "AccentColor",
         BackgroundTransparency = 0,
-        Position = UDim2.fromOffset(0, 2),
-        Size = UDim2.new(1, 0, 0, 22),
+        Size = UDim2.new(1, 0, 0, 90),
         ZIndex = 1,
         Parent = Main,
     })
+    ScaledCorner(AccentGlow, 1)
     New("UIGradient", {
-        Rotation = 90,
+        Rotation = 70,
         Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.9),
+            NumberSequenceKeypoint.new(0, 0.86),
+            NumberSequenceKeypoint.new(0.45, 0.97),
             NumberSequenceKeypoint.new(1, 1),
         }),
         Parent = AccentGlow,
@@ -5354,21 +5411,38 @@ function Library:CreateWindow(WindowInfo)
     })
     List(TitleRow, 10, Enum.FillDirection.Horizontal, nil, Enum.VerticalAlignment.Center)
 
-    local WindowIcon = IconLabel({
-        ImageColor3 = "AccentColor",
+    -- Logo: solid accent tile with the icon knocked out in white (custom images fill the tile)
+    local LogoTile = New("Frame", {
+        BackgroundColor3 = "AccentColor",
         LayoutOrder = 0,
-        Size = WindowInfo.IconSize,
+        Size = UDim2.fromOffset(28, 28),
         Visible = false,
         Parent = TitleRow,
+    })
+    Corner(LogoTile, 8)
+    New("UIGradient", {
+        Rotation = 45,
+        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 170)),
+        Parent = LogoTile,
+    })
+    New("UIStroke", { Color = "AccentColor", Thickness = 3, Transparency = 0.8, Parent = LogoTile })
+    local WindowIcon = IconLabel({
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        ImageColor3 = Library.Colors.OnAccent,
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(17, 17),
+        Parent = LogoTile,
     }, nil)
     if WindowInfo.Icon then
         local Icon = Library:GetCustomIcon(WindowInfo.Icon)
         if Icon then
-            WindowIcon.Visible = true
+            LogoTile.Visible = true
             Library:ApplyIcon(WindowIcon, WindowInfo.Icon)
             if Icon.Custom or tonumber(WindowInfo.Icon) then
                 WindowIcon.ImageColor3 = Color3.new(1, 1, 1)
+                WindowIcon.Size = UDim2.fromScale(1, 1)
                 Library.Registry[WindowIcon] = nil
+                LogoTile.BackgroundTransparency = 1
             end
         end
     end
@@ -5383,6 +5457,10 @@ function Library:CreateWindow(WindowInfo)
         TextSize = 17,
         Parent = TitleRow,
     })
+    Library.Watermark:SetTitle(WindowInfo.Title)
+    if WindowInfo.Icon and not tonumber(WindowInfo.Icon) then
+        Library.Watermark:SetIcon(WindowInfo.Icon)
+    end
 
     local TitleDivider = New("Frame", {
         BackgroundColor3 = "OutlineColor",
@@ -5537,11 +5615,79 @@ function Library:CreateWindow(WindowInfo)
         CanvasSize = UDim2.fromScale(0, 0),
         ScrollBarThickness = 0,
         ScrollingDirection = Enum.ScrollingDirection.Y,
-        Size = UDim2.new(1, -1, 1, 0),
+        Size = UDim2.new(1, -1, 1, -60),
         Parent = Sidebar,
     })
     List(TabsList, 3)
-    Padding(TabsList, 10, 8, 10, 8)
+    Padding(TabsList, 12, 8, 10, 8)
+
+    local NavLabel = New("TextLabel", {
+        BackgroundTransparency = 1,
+        FontFace = SemiBoldFont,
+        LayoutOrder = -100000,
+        Size = UDim2.new(1, 0, 0, 20),
+        Text = "NAVIGATION",
+        TextSize = 11,
+        TextTransparency = 0.6,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = TabsList,
+    })
+    Padding(NavLabel, 0, 0, 4, 10)
+
+    -- Profile card pinned to the bottom of the sidebar
+    local Profile = New("Frame", {
+        AnchorPoint = Vector2.new(0, 1),
+        BackgroundColor3 = "MainColor",
+        Position = UDim2.new(0, 8, 1, -8),
+        Size = UDim2.new(1, -17, 0, 44),
+        Parent = Sidebar,
+    })
+    ScaledCorner(Profile, 1)
+    Stroke(Profile)
+    local Player = LocalPlayer or Players.LocalPlayer
+    local Avatar = New("ImageLabel", {
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = "BackgroundColor",
+        BackgroundTransparency = 0,
+        Image = Player and string.format("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48", Player.UserId) or "",
+        Position = UDim2.new(0, 7, 0.5, 0),
+        Size = UDim2.fromOffset(30, 30),
+        Parent = Profile,
+    })
+    Corner(Avatar, 15)
+    New("UIStroke", { Color = "AccentColor", Thickness = 1.5, Transparency = 0.3, Parent = Avatar })
+    local StatusDot = New("Frame", {
+        AnchorPoint = Vector2.new(1, 1),
+        BackgroundColor3 = Color3.fromRGB(46, 204, 113),
+        Position = UDim2.new(1, 1, 1, 1),
+        Size = UDim2.fromOffset(9, 9),
+        Parent = Avatar,
+    })
+    Corner(StatusDot, 5)
+    New("UIStroke", { Color = "MainColor", Thickness = 2, Parent = StatusDot })
+    local ProfileName = New("TextLabel", {
+        BackgroundTransparency = 1,
+        FontFace = SemiBoldFont,
+        Position = UDim2.fromOffset(45, 7),
+        Size = UDim2.new(1, -52, 0, 16),
+        Text = Player and Player.DisplayName or "Player",
+        TextSize = 13,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Profile,
+    })
+    local ProfileUser = New("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = UDim2.fromOffset(45, 22),
+        Size = UDim2.new(1, -52, 0, 14),
+        Text = Player and ("@" .. Player.Name) or "",
+        TextSize = 12,
+        TextTransparency = 0.55,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = Profile,
+    })
+    Window.Profile = Profile
 
     --// Content \\--
     local Content = New("Frame", {
@@ -5610,6 +5756,11 @@ function Library:CreateWindow(WindowInfo)
         end
         Compacted = State
         ApplySidebarWidth(State and WindowInfo.SidebarCompactWidth or SidebarWidth)
+        NavLabel.Visible = not State
+        ProfileName.Visible = not State
+        ProfileUser.Visible = not State
+        Profile.BackgroundTransparency = State and 1 or 0
+        Profile:FindFirstChildOfClass("UIStroke").Enabled = not State
         for _, Tab in Library.Tabs do
             if Tab.SetCompact then
                 Tab:SetCompact(State)
@@ -5655,6 +5806,28 @@ function Library:CreateWindow(WindowInfo)
         })
         ScaledCorner(Button, 0.75)
 
+        -- active state: red wash that fades out to the right + faint red border
+        local Highlight = New("Frame", {
+            BackgroundColor3 = "AccentColor",
+            BackgroundTransparency = 1,
+            Size = UDim2.fromScale(1, 1),
+            Parent = Button,
+        })
+        ScaledCorner(Highlight, 0.75)
+        New("UIGradient", {
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.78),
+                NumberSequenceKeypoint.new(1, 0.97),
+            }),
+            Parent = Highlight,
+        })
+        local HighlightStroke = New("UIStroke", {
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+            Color = "AccentColor",
+            Transparency = 1,
+            Parent = Highlight,
+        })
+
         local Indicator = New("Frame", {
             AnchorPoint = Vector2.new(0, 0.5),
             BackgroundColor3 = "AccentColor",
@@ -5663,6 +5836,9 @@ function Library:CreateWindow(WindowInfo)
             Parent = Button,
         })
         Corner(Indicator, 2)
+        New("UIStroke", { Color = "AccentColor", Thickness = 2, Transparency = 0.7, Parent = Indicator })
+        Highlight.Name = "Highlight"
+        HighlightStroke.Name = "HighlightStroke"
 
         local IconImage, HasIcon = IconLabel({
             AnchorPoint = Vector2.new(0, 0.5),
@@ -5715,9 +5891,14 @@ function Library:CreateWindow(WindowInfo)
             IconImage.Position = State and UDim2.new(0.5, -8, 0.5, 0) or UDim2.new(0, 11, 0.5, 0)
         end
 
+        local Highlight = Button:FindFirstChild("Highlight")
+        local HighlightStroke = Highlight:FindFirstChild("HighlightStroke")
+
         local function SetActiveVisual(Active)
             Library.Registry[IconImage].ImageColor3 = Active and "AccentColor" or "FontColor"
-            Tween(Button, Library.TweenInfo, { BackgroundTransparency = Active and 0 or 1 })
+            Tween(Button, Library.TweenInfo, { BackgroundTransparency = 1 })
+            Tween(Highlight, Library.SlowTweenInfo, { BackgroundTransparency = Active and 0 or 1 })
+            Tween(HighlightStroke, Library.SlowTweenInfo, { Transparency = Active and 0.8 or 1 })
             Tween(Label, Library.TweenInfo, { TextTransparency = Active and 0 or 0.5 })
             Tween(IconImage, Library.TweenInfo, {
                 ImageTransparency = Active and 0 or 0.5,
@@ -6008,24 +6189,38 @@ function Library:CreateWindow(WindowInfo)
             if not Info.HideHeader then
                 Header = New("TextButton", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 38),
+                    Size = UDim2.new(1, 0, 0, 46),
                     Text = "",
                     Parent = Box,
                 })
-                local IconImage, HasIcon = IconLabel({
-                    AnchorPoint = Vector2.new(0, 0.5),
-                    ImageColor3 = "AccentColor",
-                    Position = UDim2.new(0, 12, 0, 19),
-                    Size = UDim2.fromOffset(16, 16),
-                    Parent = Header,
-                }, Info.IconName)
-                IconImage.Visible = HasIcon
 
+                -- thin red edge along the top that fades out to the right
+                local Edge = New("Frame", {
+                    BackgroundColor3 = "AccentColor",
+                    Position = UDim2.fromOffset(Library.CornerRadius, 0),
+                    Size = UDim2.new(1, -Library.CornerRadius * 2, 0, 1),
+                    Parent = Header,
+                })
+                New("UIGradient", {
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0.1),
+                        NumberSequenceKeypoint.new(0.45, 0.85),
+                        NumberSequenceKeypoint.new(1, 1),
+                    }),
+                    Parent = Edge,
+                })
+
+                local Tile, _, HasIcon = AccentTile(Header, Info.IconName, 26)
+                Tile.AnchorPoint = Vector2.new(0, 0.5)
+                Tile.Position = UDim2.new(0, 12, 0, 23)
+                Tile.Visible = HasIcon == true
+
+                local TextX = HasIcon and 46 or 14
                 local NameLabel = New("TextLabel", {
                     BackgroundTransparency = 1,
                     FontFace = SemiBoldFont,
-                    Position = UDim2.fromOffset(HasIcon and 36 or 12, 0),
-                    Size = UDim2.new(1, HasIcon and -64 or -40, 0, 38),
+                    Position = UDim2.fromOffset(TextX, 0),
+                    Size = UDim2.new(1, -(TextX + 34), 0, 46),
                     Text = Info.Name,
                     TextSize = 15,
                     TextTruncate = Enum.TextTruncate.AtEnd,
@@ -6035,14 +6230,13 @@ function Library:CreateWindow(WindowInfo)
                 Groupbox.NameLabel = NameLabel
 
                 DescriptionLabel = New("TextLabel", {
-                    AutomaticSize = Enum.AutomaticSize.Y,
                     BackgroundTransparency = 1,
-                    Position = UDim2.fromOffset(12, 32),
-                    Size = UDim2.new(1, -24, 0, 0),
+                    Position = UDim2.fromOffset(TextX, 24),
+                    Size = UDim2.new(1, -(TextX + 34), 0, 14),
                     Text = "",
-                    TextSize = 13,
+                    TextSize = 12,
                     TextTransparency = 0.5,
-                    TextWrapped = true,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Visible = false,
                     Parent = Header,
@@ -6052,7 +6246,7 @@ function Library:CreateWindow(WindowInfo)
                     Chevron = IconLabel({
                         AnchorPoint = Vector2.new(1, 0.5),
                         ImageTransparency = 0.55,
-                        Position = UDim2.new(1, -12, 0, 19),
+                        Position = UDim2.new(1, -14, 0, 23),
                         Size = UDim2.fromOffset(16, 16),
                         Parent = Header,
                     }, "chevron-down")
@@ -6087,12 +6281,14 @@ function Library:CreateWindow(WindowInfo)
                 end
                 DescriptionLabel.Text = Text or ""
                 DescriptionLabel.Visible = Text ~= nil and Text ~= ""
+                local NameLabel = Groupbox.NameLabel
+                local Width = NameLabel.Size.X
                 if DescriptionLabel.Visible then
-                    task.defer(function()
-                        Header.Size = UDim2.new(1, 0, 0, 38 + DescriptionLabel.AbsoluteSize.Y / Library.DPIScale + 2)
-                    end)
+                    NameLabel.Position = UDim2.fromOffset(NameLabel.Position.X.Offset, 6)
+                    NameLabel.Size = UDim2.new(Width.Scale, Width.Offset, 0, 18)
                 else
-                    Header.Size = UDim2.new(1, 0, 0, 38)
+                    NameLabel.Position = UDim2.fromOffset(NameLabel.Position.X.Offset, 0)
+                    NameLabel.Size = UDim2.new(Width.Scale, Width.Offset, 0, 46)
                 end
             end
 
@@ -6219,21 +6415,43 @@ function Library:CreateWindow(WindowInfo)
             Stroke(Box)
             List(Box, 0)
 
-            local ButtonsRow = New("Frame", {
+            -- Header row holds a segmented control; decorations live outside the layout
+            local HeaderRow = New("Frame", {
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 38),
+                Size = UDim2.new(1, 0, 0, 46),
                 Parent = Box,
             })
-            local ButtonsList = List(ButtonsRow, 0, Enum.FillDirection.Horizontal)
+            local Edge = New("Frame", {
+                BackgroundColor3 = "AccentColor",
+                Position = UDim2.fromOffset(Library.CornerRadius, 0),
+                Size = UDim2.new(1, -Library.CornerRadius * 2, 0, 1),
+                Parent = HeaderRow,
+            })
+            New("UIGradient", {
+                Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0.1),
+                    NumberSequenceKeypoint.new(0.45, 0.85),
+                    NumberSequenceKeypoint.new(1, 1),
+                }),
+                Parent = Edge,
+            })
             New("Frame", {
                 AnchorPoint = Vector2.new(0, 1),
                 BackgroundColor3 = "OutlineColor",
                 Position = UDim2.fromScale(0, 1),
                 Size = UDim2.new(1, 0, 0, 1),
-                ZIndex = 2,
-                Parent = ButtonsRow,
+                Parent = HeaderRow,
             })
-            local _ = ButtonsList
+            local ButtonsRow = New("Frame", {
+                BackgroundColor3 = "BackgroundColor",
+                Position = UDim2.fromOffset(10, 8),
+                Size = UDim2.new(1, -20, 0, 30),
+                Parent = HeaderRow,
+            })
+            ScaledCorner(ButtonsRow, 0.75)
+            Stroke(ButtonsRow)
+            Padding(ButtonsRow, 3)
+            List(ButtonsRow, 3, Enum.FillDirection.Horizontal)
 
             local Tabbox = {
                 Name = Info.Name,
@@ -6248,9 +6466,9 @@ function Library:CreateWindow(WindowInfo)
             }
 
             local function ResizeButtons()
-                local Count = #Tabbox.TabList
+                local Count = math.max(#Tabbox.TabList, 1)
                 for _, SubTab in Tabbox.TabList do
-                    SubTab.Button.Size = UDim2.new(1 / Count, 0, 1, 0)
+                    SubTab.Button.Size = UDim2.new(1 / Count, -3 * (Count - 1) / Count, 1, 0)
                 end
             end
 
@@ -6267,11 +6485,19 @@ function Library:CreateWindow(WindowInfo)
                 }
 
                 local Button = New("TextButton", {
+                    BackgroundColor3 = "AccentColor",
                     BackgroundTransparency = 1,
                     LayoutOrder = #Tabbox.TabList + 1,
                     Size = UDim2.new(1, 0, 1, 0),
                     Text = "",
                     Parent = ButtonsRow,
+                })
+                Corner(Button, math.max(Library.CornerRadius - 2, 3))
+                local ButtonStroke = New("UIStroke", {
+                    ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    Color = "AccentColor",
+                    Transparency = 1,
+                    Parent = Button,
                 })
                 local Inner = New("Frame", {
                     AnchorPoint = Vector2.new(0.5, 0.5),
@@ -6294,14 +6520,6 @@ function Library:CreateWindow(WindowInfo)
                     TextSize = 14,
                     TextTransparency = 0.5,
                     Parent = Inner,
-                })
-                local Underline = New("Frame", {
-                    AnchorPoint = Vector2.new(0.5, 1),
-                    BackgroundColor3 = "AccentColor",
-                    Position = UDim2.fromScale(0.5, 1),
-                    Size = UDim2.new(0, 0, 0, 2),
-                    ZIndex = 3,
-                    Parent = Button,
                 })
 
                 local Container = New("Frame", {
@@ -6328,7 +6546,8 @@ function Library:CreateWindow(WindowInfo)
                     IconImage.ImageColor3 = Library.Scheme.AccentColor
                     Tween(ButtonLabel, Library.TweenInfo, { TextTransparency = 0 })
                     Tween(IconImage, Library.TweenInfo, { ImageTransparency = 0 })
-                    Tween(Underline, Library.SlowTweenInfo, { Size = UDim2.new(0.6, 0, 0, 2) })
+                    Tween(Button, Library.TweenInfo, { BackgroundTransparency = 0.84 })
+                    Tween(ButtonStroke, Library.TweenInfo, { Transparency = 0.7 })
                 end
                 function SubTab:Hide()
                     Container.Visible = false
@@ -6336,7 +6555,8 @@ function Library:CreateWindow(WindowInfo)
                     IconImage.ImageColor3 = Library.Scheme.FontColor
                     Tween(ButtonLabel, Library.TweenInfo, { TextTransparency = 0.5 })
                     Tween(IconImage, Library.TweenInfo, { ImageTransparency = 0.5 })
-                    Tween(Underline, Library.TweenInfo, { Size = UDim2.new(0, 0, 0, 2) })
+                    Tween(Button, Library.TweenInfo, { BackgroundTransparency = 1 })
+                    Tween(ButtonStroke, Library.TweenInfo, { Transparency = 1 })
                 end
                 function SubTab:Resize() end
                 function SubTab:UpdateCorners() end
@@ -6816,7 +7036,7 @@ function Library:CreateWindow(WindowInfo)
 
         local OverlayClick = DialogOverlay.MouseButton1Click:Connect(function()
             if Info.OutsideClickDismiss and Library.ActiveDialog == Dialog then
-                local Mouse = UserInputService:GetMouseLocation()
+                local Mouse = GetMouseAbs()
                 if not Library:MouseIsOverFrame(Card, Mouse) then
                     Dialog:Dismiss()
                 end
@@ -7060,13 +7280,28 @@ function Library:Notify(...)
     ScaledCorner(Card, 1)
     Stroke(Card)
 
-    -- Linoria accent edge
-    local Edge = New("Frame", {
+    -- red wash from the left + floating accent pill (Linoria's accent edge, modernised)
+    local Wash = New("Frame", {
         BackgroundColor3 = "AccentColor",
-        Size = UDim2.new(0, 3, 1, 0),
+        Size = UDim2.fromScale(1, 1),
         Parent = Card,
     })
-    local _ = Edge
+    ScaledCorner(Wash, 1)
+    New("UIGradient", {
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.86),
+            NumberSequenceKeypoint.new(0.5, 0.98),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+        Parent = Wash,
+    })
+    local Edge = New("Frame", {
+        BackgroundColor3 = "AccentColor",
+        Position = UDim2.fromOffset(0, 10),
+        Size = UDim2.new(0, 2, 1, -20),
+        Parent = Card,
+    })
+    Corner(Edge, 1)
 
     local Body = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
@@ -7074,16 +7309,16 @@ function Library:Notify(...)
         Size = UDim2.new(1, 0, 0, 0),
         Parent = Card,
     })
-    Padding(Body, 11, 12, 13, 15)
+    Padding(Body, 12, 12, 14, 14)
 
-    local IconSize = Data.BigIcon and 28 or 16
-    local IconImage, HasIcon = IconLabel({
-        ImageColor3 = Data.IconColor or "AccentColor",
-        Size = UDim2.fromOffset(IconSize, IconSize),
-        Parent = Body,
-    }, Data.Icon)
-    IconImage.Visible = HasIcon and Data.Icon ~= nil
-    local TextX = IconImage.Visible and IconSize + 10 or 0
+    local IconSize = Data.BigIcon and 36 or 30
+    local IconTile, IconImage, HasIcon = AccentTile(Body, Data.Icon, IconSize)
+    if Data.IconColor then
+        Library.Registry[IconImage].ImageColor3 = nil
+        IconImage.ImageColor3 = Data.IconColor
+    end
+    IconTile.Visible = HasIcon == true and Data.Icon ~= nil
+    local TextX = IconTile.Visible and IconSize + 11 or 0
 
     local TextHolder = New("Frame", {
         AutomaticSize = Enum.AutomaticSize.Y,
