@@ -1462,15 +1462,15 @@ local function DraggableShell(Name: string?)
 end
 
 local function AccentTile(Parent, IconName, Size, LayoutOrder)
+    -- neutral tile, the icon carries the accent
     local Tile = New("Frame", {
-        BackgroundColor3 = "AccentColor",
-        BackgroundTransparency = 0.82,
+        BackgroundColor3 = "MainColor",
         LayoutOrder = LayoutOrder or 0,
         Size = UDim2.fromOffset(Size, Size),
         Parent = Parent,
     })
-    Corner(Tile, math.floor(Size * 0.3))
-    Stroke(Tile, "AccentColor", 0.7)
+    Corner(Tile, math.floor(Size * 0.28))
+    Stroke(Tile)
     local Icon, HasIcon = IconLabel({
         AnchorPoint = Vector2.new(0.5, 0.5),
         ImageColor3 = "AccentColor",
@@ -5361,30 +5361,12 @@ function Library:CreateWindow(WindowInfo)
     New("UIGradient", {
         Transparency = NumberSequence.new({
             NumberSequenceKeypoint.new(0, 1),
-            NumberSequenceKeypoint.new(0.15, 0.6),
-            NumberSequenceKeypoint.new(0.35, 0),
-            NumberSequenceKeypoint.new(0.65, 0.6),
+            NumberSequenceKeypoint.new(0.3, 0.55),
+            NumberSequenceKeypoint.new(0.5, 0.35),
+            NumberSequenceKeypoint.new(0.7, 0.55),
             NumberSequenceKeypoint.new(1, 1),
         }),
         Parent = AccentStrip,
-    })
-    -- soft red haze bleeding down from the top-left corner
-    local AccentGlow = New("Frame", {
-        BackgroundColor3 = "AccentColor",
-        BackgroundTransparency = 0,
-        Size = UDim2.new(1, 0, 0, 90),
-        ZIndex = 1,
-        Parent = Main,
-    })
-    ScaledCorner(AccentGlow, 1)
-    New("UIGradient", {
-        Rotation = 70,
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.86),
-            NumberSequenceKeypoint.new(0.45, 0.97),
-            NumberSequenceKeypoint.new(1, 1),
-        }),
-        Parent = AccentGlow,
     })
 
     --// Top bar \\--
@@ -5415,22 +5397,16 @@ function Library:CreateWindow(WindowInfo)
     local LogoTile = New("Frame", {
         BackgroundColor3 = "AccentColor",
         LayoutOrder = 0,
-        Size = UDim2.fromOffset(28, 28),
+        Size = UDim2.fromOffset(26, 26),
         Visible = false,
         Parent = TitleRow,
     })
-    Corner(LogoTile, 8)
-    New("UIGradient", {
-        Rotation = 45,
-        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 170)),
-        Parent = LogoTile,
-    })
-    New("UIStroke", { Color = "AccentColor", Thickness = 3, Transparency = 0.8, Parent = LogoTile })
+    Corner(LogoTile, 7)
     local WindowIcon = IconLabel({
         AnchorPoint = Vector2.new(0.5, 0.5),
         ImageColor3 = Library.Colors.OnAccent,
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(17, 17),
+        Size = UDim2.fromOffset(15, 15),
         Parent = LogoTile,
     }, nil)
     if WindowInfo.Icon then
@@ -5655,7 +5631,7 @@ function Library:CreateWindow(WindowInfo)
         Parent = Profile,
     })
     Corner(Avatar, 15)
-    New("UIStroke", { Color = "AccentColor", Thickness = 1.5, Transparency = 0.3, Parent = Avatar })
+    New("UIStroke", { Color = "OutlineColor", Thickness = 1, Parent = Avatar })
     local StatusDot = New("Frame", {
         AnchorPoint = Vector2.new(1, 1),
         BackgroundColor3 = Color3.fromRGB(46, 204, 113),
@@ -5806,24 +5782,17 @@ function Library:CreateWindow(WindowInfo)
         })
         ScaledCorner(Button, 0.75)
 
-        -- active state: red wash that fades out to the right + faint red border
+        -- active state: neutral raised surface; only the icon + indicator use the accent
         local Highlight = New("Frame", {
-            BackgroundColor3 = "AccentColor",
+            BackgroundColor3 = "MainColor",
             BackgroundTransparency = 1,
             Size = UDim2.fromScale(1, 1),
             Parent = Button,
         })
         ScaledCorner(Highlight, 0.75)
-        New("UIGradient", {
-            Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.78),
-                NumberSequenceKeypoint.new(1, 0.97),
-            }),
-            Parent = Highlight,
-        })
         local HighlightStroke = New("UIStroke", {
             ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-            Color = "AccentColor",
+            Color = "OutlineColor",
             Transparency = 1,
             Parent = Highlight,
         })
@@ -5836,7 +5805,6 @@ function Library:CreateWindow(WindowInfo)
             Parent = Button,
         })
         Corner(Indicator, 2)
-        New("UIStroke", { Color = "AccentColor", Thickness = 2, Transparency = 0.7, Parent = Indicator })
         Highlight.Name = "Highlight"
         HighlightStroke.Name = "HighlightStroke"
 
@@ -5898,7 +5866,7 @@ function Library:CreateWindow(WindowInfo)
             Library.Registry[IconImage].ImageColor3 = Active and "AccentColor" or "FontColor"
             Tween(Button, Library.TweenInfo, { BackgroundTransparency = 1 })
             Tween(Highlight, Library.SlowTweenInfo, { BackgroundTransparency = Active and 0 or 1 })
-            Tween(HighlightStroke, Library.SlowTweenInfo, { Transparency = Active and 0.8 or 1 })
+            Tween(HighlightStroke, Library.SlowTweenInfo, { Transparency = Active and 0 or 1 })
             Tween(Label, Library.TweenInfo, { TextTransparency = Active and 0 or 0.5 })
             Tween(IconImage, Library.TweenInfo, {
                 ImageTransparency = Active and 0 or 0.5,
@@ -6194,28 +6162,16 @@ function Library:CreateWindow(WindowInfo)
                     Parent = Box,
                 })
 
-                -- thin red edge along the top that fades out to the right
-                local Edge = New("Frame", {
-                    BackgroundColor3 = "AccentColor",
-                    Position = UDim2.fromOffset(Library.CornerRadius, 0),
-                    Size = UDim2.new(1, -Library.CornerRadius * 2, 0, 1),
+                local HeaderIcon, HasIcon = IconLabel({
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    ImageColor3 = "AccentColor",
+                    Position = UDim2.new(0, 14, 0, 23),
+                    Size = UDim2.fromOffset(16, 16),
                     Parent = Header,
-                })
-                New("UIGradient", {
-                    Transparency = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, 0.1),
-                        NumberSequenceKeypoint.new(0.45, 0.85),
-                        NumberSequenceKeypoint.new(1, 1),
-                    }),
-                    Parent = Edge,
-                })
+                }, Info.IconName)
+                HeaderIcon.Visible = HasIcon == true
 
-                local Tile, _, HasIcon = AccentTile(Header, Info.IconName, 26)
-                Tile.AnchorPoint = Vector2.new(0, 0.5)
-                Tile.Position = UDim2.new(0, 12, 0, 23)
-                Tile.Visible = HasIcon == true
-
-                local TextX = HasIcon and 46 or 14
+                local TextX = HasIcon and 40 or 14
                 local NameLabel = New("TextLabel", {
                     BackgroundTransparency = 1,
                     FontFace = SemiBoldFont,
@@ -6421,20 +6377,6 @@ function Library:CreateWindow(WindowInfo)
                 Size = UDim2.new(1, 0, 0, 46),
                 Parent = Box,
             })
-            local Edge = New("Frame", {
-                BackgroundColor3 = "AccentColor",
-                Position = UDim2.fromOffset(Library.CornerRadius, 0),
-                Size = UDim2.new(1, -Library.CornerRadius * 2, 0, 1),
-                Parent = HeaderRow,
-            })
-            New("UIGradient", {
-                Transparency = NumberSequence.new({
-                    NumberSequenceKeypoint.new(0, 0.1),
-                    NumberSequenceKeypoint.new(0.45, 0.85),
-                    NumberSequenceKeypoint.new(1, 1),
-                }),
-                Parent = Edge,
-            })
             New("Frame", {
                 AnchorPoint = Vector2.new(0, 1),
                 BackgroundColor3 = "OutlineColor",
@@ -6485,7 +6427,7 @@ function Library:CreateWindow(WindowInfo)
                 }
 
                 local Button = New("TextButton", {
-                    BackgroundColor3 = "AccentColor",
+                    BackgroundColor3 = Library.Colors.Elevated,
                     BackgroundTransparency = 1,
                     LayoutOrder = #Tabbox.TabList + 1,
                     Size = UDim2.new(1, 0, 1, 0),
@@ -6495,7 +6437,7 @@ function Library:CreateWindow(WindowInfo)
                 Corner(Button, math.max(Library.CornerRadius - 2, 3))
                 local ButtonStroke = New("UIStroke", {
                     ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-                    Color = "AccentColor",
+                    Color = "OutlineColor",
                     Transparency = 1,
                     Parent = Button,
                 })
@@ -6546,8 +6488,8 @@ function Library:CreateWindow(WindowInfo)
                     IconImage.ImageColor3 = Library.Scheme.AccentColor
                     Tween(ButtonLabel, Library.TweenInfo, { TextTransparency = 0 })
                     Tween(IconImage, Library.TweenInfo, { ImageTransparency = 0 })
-                    Tween(Button, Library.TweenInfo, { BackgroundTransparency = 0.84 })
-                    Tween(ButtonStroke, Library.TweenInfo, { Transparency = 0.7 })
+                    Tween(Button, Library.TweenInfo, { BackgroundTransparency = 0 })
+                    Tween(ButtonStroke, Library.TweenInfo, { Transparency = 0 })
                 end
                 function SubTab:Hide()
                     Container.Visible = false
@@ -7280,21 +7222,7 @@ function Library:Notify(...)
     ScaledCorner(Card, 1)
     Stroke(Card)
 
-    -- red wash from the left + floating accent pill (Linoria's accent edge, modernised)
-    local Wash = New("Frame", {
-        BackgroundColor3 = "AccentColor",
-        Size = UDim2.fromScale(1, 1),
-        Parent = Card,
-    })
-    ScaledCorner(Wash, 1)
-    New("UIGradient", {
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.86),
-            NumberSequenceKeypoint.new(0.5, 0.98),
-            NumberSequenceKeypoint.new(1, 1),
-        }),
-        Parent = Wash,
-    })
+    -- slim accent pill on the left (Linoria's accent edge)
     local Edge = New("Frame", {
         BackgroundColor3 = "AccentColor",
         Position = UDim2.fromOffset(0, 10),
